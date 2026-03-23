@@ -16,6 +16,9 @@ async fn main() -> Result<()> {
     // Load config
     let mut config = AppConfig::load(&cli.config)?;
 
+    // Env overrides (after TOML, before CLI)
+    config.apply_env_overrides();
+
     // CLI overrides
     if let Some(host) = cli.host {
         config.server.host = host;

@@ -126,6 +126,35 @@ impl AppConfig {
             Ok(AppConfig::default())
         }
     }
+
+    /// Apply environment variable overrides (called after TOML load, before CLI overrides).
+    pub fn apply_env_overrides(&mut self) {
+        if let Ok(v) = std::env::var("SQZ_HOST") {
+            self.server.host = v;
+        }
+        if let Ok(v) = std::env::var("SQZ_PORT") {
+            if let Ok(p) = v.parse::<u16>() {
+                self.server.port = p;
+            }
+        }
+        if let Ok(v) = std::env::var("SQZ_DB_PATH") {
+            self.database.path = v;
+        }
+        if let Ok(v) = std::env::var("SQZ_OPENAI_BASE_URL") {
+            self.upstream.openai_base_url = v;
+        }
+        if let Ok(v) = std::env::var("SQZ_ANTHROPIC_BASE_URL") {
+            self.upstream.anthropic_base_url = v;
+        }
+        if let Ok(v) = std::env::var("SQZ_LOG_LEVEL") {
+            self.logging.level = v;
+        }
+        if let Ok(v) = std::env::var("SQZ_COMPRESSION_ENABLED") {
+            if let Ok(b) = v.parse::<bool>() {
+                self.compression.enabled = b;
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

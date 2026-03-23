@@ -1,0 +1,23 @@
+services:
+  sqz:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - sqz-data:/data
+    environment:
+      # Override upstream URLs if needed
+      # SQZ_OPENAI_BASE_URL: "https://api.openai.com"
+      # SQZ_ANTHROPIC_BASE_URL: "https://api.anthropic.com"
+      # SQZ_LOG_LEVEL: "info"
+      # SQZ_COMPRESSION_ENABLED: "true"
+      SQZ_HOST: "0.0.0.0"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  sqz-data:
