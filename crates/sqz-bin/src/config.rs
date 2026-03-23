@@ -238,6 +238,8 @@ pub struct CompressionConfig {
     pub languages: Vec<String>,
     #[serde(default)]
     pub layers: LayersConfig,
+    #[serde(default)]
+    pub preprocessor: PreprocessorAppConfig,
 }
 
 impl Default for CompressionConfig {
@@ -249,6 +251,31 @@ impl Default for CompressionConfig {
             default_language: default_language(),
             languages: default_languages(),
             layers: LayersConfig::default(),
+            preprocessor: PreprocessorAppConfig::default(),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// PreprocessorAppConfig
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct PreprocessorAppConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_true")]
+    pub structural_enabled: bool,
+    #[serde(default = "default_true")]
+    pub semantic_enabled: bool,
+}
+
+impl Default for PreprocessorAppConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_true(),
+            structural_enabled: default_true(),
+            semantic_enabled: default_true(),
         }
     }
 }

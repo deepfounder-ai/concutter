@@ -6,6 +6,7 @@ use aho_corasick::AhoCorasick;
 use crate::code_fence;
 use crate::domain_detector;
 use crate::layer2_domain::DomainLayer;
+use crate::preprocessor::Preprocessor;
 use crate::token_counter::TokenCounter;
 use crate::types::*;
 
@@ -35,6 +36,8 @@ pub struct Compressor {
     config: CompressorConfig,
     /// Domain configs for auto-detection.
     domain_configs: HashMap<String, DomainConfig>,
+    /// Optional regex preprocessor (runs before Aho-Corasick).
+    preprocessor: Option<Preprocessor>,
 }
 
 impl Compressor {
@@ -48,6 +51,17 @@ impl Compressor {
         domain_layer: &DomainLayer,
         learned_rules: Vec<Rule>,
         config: CompressorConfig,
+    ) -> Result<Self, CoreError> {
+        Self::build_with_preprocessor(static_rules, domain_layer, learned_rules, config, None)
+    }
+
+    /// Build a `Compressor` with an optional regex preprocessor.
+    pub fn build_with_preprocessor(
+        static_rules: Vec<Rule>,
+        domain_layer: &DomainLayer,
+        learned_rules: Vec<Rule>,
+        config: CompressorConfig,
+        preprocessor: Option<Preprocessor>,
     ) -> Result<Self, CoreError> {
         // Collect enabled rules from all three layers
         let mut all_rules: Vec<Rule> = Vec::new();
@@ -125,6 +139,7 @@ impl Compressor {
             token_counter: TokenCounter::new(),
             config,
             domain_configs,
+            preprocessor,
         })
     }
 
@@ -150,6 +165,15 @@ impl Compressor {
                 domain_detected: None,
             };
         }
+
+        // Run preprocessor first (if configured)
+        let (working_text, mut preprocess_rules) = if let Some(ref pp) = self.preprocessor {
+            let pp_result = pp.process(text);
+            (pp_result.text, pp_result.rules_applied)
+        } else {
+            (text.to_string(), vec![])
+        };
+        let text = &working_text;
 
         // Detect domain
         let domain_detected = domain_hint
@@ -267,6 +291,9 @@ impl Compressor {
         };
 
         rules_applied.reverse(); // put in forward order
+        // Prepend preprocessor rules
+        preprocess_rules.append(&mut rules_applied);
+        let mut rules_applied = preprocess_rules;
         rules_applied.dedup();
 
         CompressionResult {

@@ -34,6 +34,14 @@ static_enabled = true
 domain_enabled = true
 learned_enabled = true
 
+[compression.preprocessor]
+# Enable regex preprocessor (runs before Aho-Corasick)
+enabled = true
+# Structural rules: markdown headings, bold/italic, links, URLs, HTML entities
+structural_enabled = true
+# Semantic regex rules (reserved for future expansion)
+semantic_enabled = true
+
 [shadow]
 # Enable shadow mode (A/B testing)
 enabled = false

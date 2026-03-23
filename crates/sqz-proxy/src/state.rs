@@ -3,7 +3,7 @@ use tokio::sync::RwLock;
 
 use sqz_core::layer1_static::StaticLayer;
 use sqz_core::layer2_domain::DomainLayer;
-use sqz_core::{CompressorConfig, Compressor, RuleLayer};
+use sqz_core::{CompressorConfig, Compressor, Preprocessor, PreprocessorConfig, RuleLayer};
 
 use crate::error::ProxyError;
 use crate::provider::UpstreamConfig;
@@ -40,6 +40,7 @@ impl Default for ShadowConfig {
 pub struct AppState {
     pub compressor: Arc<RwLock<Compressor>>,
     pub compressor_config: CompressorConfig,
+    pub preprocessor_config: PreprocessorConfig,
     pub store: Arc<sqz_store::Store>,
     pub http_client: reqwest::Client,
     pub upstream_config: UpstreamConfig,
@@ -78,12 +79,25 @@ impl AppState {
             .filter(|r| r.layer == RuleLayer::Learned)
             .collect();
 
+        // Build preprocessor
+        let preprocessor = if self.preprocessor_config.enabled {
+            Some(
+                Preprocessor::build(&self.preprocessor_config)
+                    .map_err(|e| {
+                        ProxyError::ConfigError(format!("failed to build preprocessor: {e}"))
+                    })?,
+            )
+        } else {
+            None
+        };
+
         // Build new compressor
-        let new_compressor = Compressor::build(
+        let new_compressor = Compressor::build_with_preprocessor(
             static_layer.rules(),
             &domain_layer,
             learned_rules,
             config,
+            preprocessor,
         )
         .map_err(|e| ProxyError::CompressionError(format!("failed to build compressor: {e}")))?;
 

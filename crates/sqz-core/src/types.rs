@@ -175,3 +175,9 @@ impl Default for LayersEnabled {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// PreprocessorConfig (re-exported from preprocessor module)
+// ---------------------------------------------------------------------------
+
+pub use crate::preprocessor::PreprocessorConfig;

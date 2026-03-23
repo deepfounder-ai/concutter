@@ -101,11 +101,25 @@ async fn main() -> Result<()> {
         compressor_config.min_samples,
     );
 
-    let compressor = sqz_core::Compressor::build(
+    // Build preprocessor
+    let preprocessor = if config.compression.preprocessor.enabled {
+        Some(sqz_core::Preprocessor::build(
+            &sqz_core::PreprocessorConfig {
+                enabled: config.compression.preprocessor.enabled,
+                structural_enabled: config.compression.preprocessor.structural_enabled,
+                semantic_enabled: config.compression.preprocessor.semantic_enabled,
+            },
+        )?)
+    } else {
+        None
+    };
+
+    let compressor = sqz_core::Compressor::build_with_preprocessor(
         static_layer.rules(),
         &domain_layer,
         learned_layer.active_rules(),
         compressor_config.clone(),
+        preprocessor,
     )?;
 
     let compressor = Arc::new(RwLock::new(compressor));
@@ -121,6 +135,11 @@ async fn main() -> Result<()> {
     let state = Arc::new(sqz_proxy::AppState {
         compressor,
         compressor_config,
+        preprocessor_config: sqz_core::PreprocessorConfig {
+            enabled: config.compression.preprocessor.enabled,
+            structural_enabled: config.compression.preprocessor.structural_enabled,
+            semantic_enabled: config.compression.preprocessor.semantic_enabled,
+        },
         store: store.clone(),
         http_client,
         upstream_config: sqz_proxy::provider::UpstreamConfig {

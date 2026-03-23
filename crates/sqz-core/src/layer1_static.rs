@@ -14,11 +14,13 @@ pub struct StaticLayer {
 }
 
 impl StaticLayer {
-    /// Load stopword files for the given languages from `rules_dir/stopwords/{lang}.txt`.
+    /// Load stopword files for the given languages from `rules_dir/stopwords/{lang}.txt`
+    /// and `rules_dir/stopwords/{lang}_semantic.txt`.
     pub fn load(languages: &[String], rules_dir: &Path) -> Result<Self, CoreError> {
         let mut all_lines: Vec<String> = Vec::new();
 
         for lang in languages {
+            // Load main stopwords: {lang}.txt
             let path = rules_dir.join("stopwords").join(format!("{lang}.txt"));
             if path.exists() {
                 let content = std::fs::read_to_string(&path)?;
@@ -31,6 +33,18 @@ impl StaticLayer {
             } else {
                 tracing::warn!("stopword file not found: {}", path.display());
             }
+
+            // Load semantic phrases: {lang}_semantic.txt
+            let semantic_path = rules_dir.join("stopwords").join(format!("{lang}_semantic.txt"));
+            if semantic_path.exists() {
+                let content = std::fs::read_to_string(&semantic_path)?;
+                for line in content.lines() {
+                    let trimmed = line.trim();
+                    if !trimmed.is_empty() {
+                        all_lines.push(trimmed.to_string());
+                    }
+                }
+            }
         }
 
         Ok(Self::load_from_strings(&all_lines))
@@ -38,11 +52,22 @@ impl StaticLayer {
 
     /// Build a `StaticLayer` directly from a list of pattern strings (useful
     /// for testing or when patterns are already in memory).
+    ///
+    /// Supports optional ` -> ` separator for replacement rules:
+    /// - `"please"` — removes "please" (empty replacement)
+    /// - `"in order to -> to"` — replaces "in order to" with "to"
     pub fn load_from_strings(lines: &[String]) -> Self {
         let mut patterns: Vec<(String, String)> = lines
             .iter()
             .filter(|l| !l.trim().is_empty())
-            .map(|l| (l.trim().to_lowercase(), String::new()))
+            .map(|l| {
+                let trimmed = l.trim();
+                if let Some((pat, repl)) = trimmed.split_once(" -> ") {
+                    (pat.trim().to_lowercase(), repl.trim().to_string())
+                } else {
+                    (trimmed.to_lowercase(), String::new())
+                }
+            })
             .collect();
 
         // De-duplicate
@@ -101,6 +126,22 @@ mod tests {
         let layer = StaticLayer::load_from_strings(&lines);
         let rules = layer.rules();
         assert_eq!(rules[0].replacement, "");
+    }
+
+    #[test]
+    fn test_arrow_replacement() {
+        let lines = vec![
+            "in order to -> to".to_string(),
+            "due to the fact that -> because".to_string(),
+        ];
+        let layer = StaticLayer::load_from_strings(&lines);
+        let rules = layer.rules();
+        assert_eq!(rules.len(), 2);
+        // Longest first
+        assert_eq!(rules[0].pattern, "due to the fact that");
+        assert_eq!(rules[0].replacement, "because");
+        assert_eq!(rules[1].pattern, "in order to");
+        assert_eq!(rules[1].replacement, "to");
     }
 
     #[test]
