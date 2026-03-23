@@ -1,0 +1,17 @@
+[package]
+name = "sqz-store"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sqz-core = { path = "../sqz-core" }
+rusqlite.workspace = true
+tokio-rusqlite.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+anyhow.workspace = true

@@ -1,0 +1,67 @@
+[domain]
+name = "code"
+description = "Software development and programming"
+keywords = ["function", "class", "variable", "bug", "error", "compile", "runtime", "api", "endpoint", "database", "query", "git", "commit", "deploy", "docker", "kubernetes", "react", "python", "javascript", "typescript", "rust"]
+
+[domain.protected_terms]
+terms = []
+
+[[rules]]
+pattern = "write a function that"
+replacement = "function:"
+
+[[rules]]
+pattern = "write a program that"
+replacement = "program:"
+
+[[rules]]
+pattern = "create a class that"
+replacement = "class:"
+
+[[rules]]
+pattern = "implement a method that"
+replacement = "method:"
+
+[[rules]]
+pattern = "add error handling for"
+replacement = "handle errors:"
+
+[[rules]]
+pattern = "refactor the following code"
+replacement = "refactor:"
+
+[[rules]]
+pattern = "optimize the performance of"
+replacement = "optimize:"
+
+[[rules]]
+pattern = "fix the bug in"
+replacement = "fix bug:"
+
+[[rules]]
+pattern = "write unit tests for"
+replacement = "unit tests:"
+
+[[rules]]
+pattern = "add comments to explain"
+replacement = "comment:"
+
+[[rules]]
+pattern = "convert this code from"
+replacement = "convert:"
+
+[[rules]]
+pattern = "debug the following"
+replacement = "debug:"
+
+[[rules]]
+pattern = "explain how this code works"
+replacement = "explain code:"
+
+[[rules]]
+pattern = "the code should"
+replacement = "code must"
+
+[[rules]]
+pattern = "make sure that"
+replacement = "ensure"

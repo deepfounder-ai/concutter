@@ -1,0 +1,63 @@
+# Concutter (sqz) Configuration
+
+[server]
+host = "127.0.0.1"
+port = 8080
+# Request timeout in seconds
+request_timeout = 120
+
+[upstream]
+# OpenAI API base URL
+openai_base_url = "https://api.openai.com"
+# Anthropic API base URL
+anthropic_base_url = "https://api.anthropic.com"
+
+[database]
+# SQLite database path
+path = "concutter.db"
+
+[compression]
+# Enable compression (set to false for passthrough mode)
+enabled = true
+# Minimum confidence for learned rules to be active
+confidence_threshold = 0.8
+# Minimum samples before a learned rule is considered
+min_samples = 10
+# Default language for stopwords
+default_language = "en"
+# Additional languages (comma-separated)
+languages = ["en"]
+
+[compression.layers]
+# Enable/disable individual layers
+static_enabled = true
+domain_enabled = true
+learned_enabled = true
+
+[shadow]
+# Enable shadow mode (A/B testing)
+enabled = false
+# Sample rate (0.0 to 1.0)
+sample_rate = 0.1
+# Embedding model
+embedding_model = "text-embedding-3-small"
+# Max concurrent shadow requests
+max_concurrency = 5
+# EMA alpha for confidence updates
+ema_alpha = 0.1
+
+[logging]
+# Log level: trace, debug, info, warn, error
+level = "info"
+# JSON format logs
+json = false
+
+[admin]
+# Enable admin API
+enabled = true
+# Admin API key (optional, if empty admin API is unprotected)
+# api_key = "your-secret-admin-key"
+
+[reload]
+# Auto-reload interval in seconds (0 = disabled)
+interval = 300

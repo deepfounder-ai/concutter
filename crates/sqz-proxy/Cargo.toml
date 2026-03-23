@@ -1,0 +1,25 @@
+[package]
+name = "sqz-proxy"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sqz-core = { path = "../sqz-core" }
+sqz-store = { path = "../sqz-store" }
+axum.workspace = true
+axum-extra.workspace = true
+reqwest.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+hyper.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+futures.workspace = true
+bytes.workspace = true
+anyhow.workspace = true

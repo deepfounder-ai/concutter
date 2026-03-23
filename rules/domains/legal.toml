@@ -1,0 +1,47 @@
+[domain]
+name = "legal"
+description = "Legal documents and contracts"
+keywords = ["contract", "clause", "liability", "plaintiff", "defendant", "jurisdiction", "statute", "regulation", "compliance", "court", "lawsuit", "damages", "negligence", "breach", "indemnify", "arbitration", "tort", "precedent"]
+
+[domain.protected_terms]
+terms = ["force majeure", "pro bono", "habeas corpus", "de facto", "de jure", "prima facie", "bona fide", "mens rea", "actus reus", "res judicata", "stare decisis", "amicus curiae", "voir dire", "subpoena", "affidavit", "ex parte", "in camera", "inter alia", "mutatis mutandis", "nolo contendere", "modus operandi"]
+
+[[rules]]
+pattern = "in accordance with the provisions of"
+replacement = "per"
+
+[[rules]]
+pattern = "notwithstanding the foregoing"
+replacement = "despite above"
+
+[[rules]]
+pattern = "shall be deemed to"
+replacement = "is considered"
+
+[[rules]]
+pattern = "for the purposes of this"
+replacement = "for this"
+
+[[rules]]
+pattern = "subject to the terms and conditions"
+replacement = "subject to terms"
+
+[[rules]]
+pattern = "in the event that"
+replacement = "if"
+
+[[rules]]
+pattern = "prior to the commencement of"
+replacement = "before"
+
+[[rules]]
+pattern = "subsequent to the termination of"
+replacement = "after termination of"
+
+[[rules]]
+pattern = "with respect to"
+replacement = "regarding"
+
+[[rules]]
+pattern = "in connection with"
+replacement = "regarding"

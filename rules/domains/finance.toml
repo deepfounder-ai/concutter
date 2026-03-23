@@ -1,0 +1,39 @@
+[domain]
+name = "finance"
+description = "Finance and banking domain"
+keywords = ["portfolio", "equity", "bond", "derivative", "hedge", "dividend", "capital", "asset", "liability", "revenue", "profit", "loss", "margin", "volatility", "liquidity", "valuation", "amortization", "depreciation"]
+
+[domain.protected_terms]
+terms = ["EBITDA", "P/E ratio", "ROI", "ROE", "WACC", "CAPM", "VaR", "Black-Scholes", "Monte Carlo", "Sharpe ratio", "beta coefficient", "yield curve", "basis points", "mark to market", "fair value"]
+
+[[rules]]
+pattern = "the total amount of"
+replacement = "total"
+
+[[rules]]
+pattern = "in terms of financial performance"
+replacement = "financially"
+
+[[rules]]
+pattern = "the current market value of"
+replacement = "market value:"
+
+[[rules]]
+pattern = "based on the financial statements"
+replacement = "per financials"
+
+[[rules]]
+pattern = "the rate of return on"
+replacement = "return on"
+
+[[rules]]
+pattern = "taking into consideration"
+replacement = "considering"
+
+[[rules]]
+pattern = "with regard to the investment"
+replacement = "re investment"
+
+[[rules]]
+pattern = "over the course of the fiscal year"
+replacement = "this fiscal year"

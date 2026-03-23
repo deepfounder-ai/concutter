@@ -1,0 +1,39 @@
+[domain]
+name = "medical"
+description = "Medical and healthcare domain"
+keywords = ["patient", "diagnosis", "symptom", "treatment", "medication", "prescription", "surgery", "clinical", "pathology", "radiology", "oncology", "cardiology", "neurology", "prognosis", "therapeutic", "contraindication"]
+
+[domain.protected_terms]
+terms = ["myocardial infarction", "cerebrovascular accident", "pulmonary embolism", "deep vein thrombosis", "diabetes mellitus", "hypertension", "hyperlipidemia", "atrial fibrillation", "chronic obstructive pulmonary disease", "congestive heart failure", "gastroesophageal reflux", "urinary tract infection", "pneumothorax", "anaphylaxis", "septicemia"]
+
+[[rules]]
+pattern = "the patient presents with"
+replacement = "patient has"
+
+[[rules]]
+pattern = "differential diagnosis includes"
+replacement = "ddx:"
+
+[[rules]]
+pattern = "physical examination reveals"
+replacement = "PE shows"
+
+[[rules]]
+pattern = "laboratory results indicate"
+replacement = "labs show"
+
+[[rules]]
+pattern = "the patient was diagnosed with"
+replacement = "dx:"
+
+[[rules]]
+pattern = "treatment plan includes"
+replacement = "tx plan:"
+
+[[rules]]
+pattern = "the patient is currently taking"
+replacement = "current meds:"
+
+[[rules]]
+pattern = "follow up appointment scheduled for"
+replacement = "f/u:"
