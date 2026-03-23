@@ -11,7 +11,7 @@ services:
       # SQZ_ANTHROPIC_BASE_URL: "https://api.anthropic.com"
       # SQZ_LOG_LEVEL: "info"
       # SQZ_COMPRESSION_ENABLED: "true"
-      SQZ_HOST: "0.0.0.0"
+      # SQZ_PORT: "8080"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s

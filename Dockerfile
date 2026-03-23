@@ -22,9 +22,12 @@ COPY concutter.example.toml /app/concutter.toml
 RUN mkdir -p /data
 
 WORKDIR /app
+ENV SQZ_HOST=0.0.0.0
+ENV SQZ_PORT=8080
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:${SQZ_PORT}/health || exit 1
 
-CMD ["sqz", "--config", "/app/concutter.toml", "--host", "0.0.0.0", "--db", "/data/concutter.db"]
+CMD ["sqz", "--config", "/app/concutter.toml", "--db", "/data/concutter.db"]
