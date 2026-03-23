@@ -4,6 +4,7 @@ FROM rust:1.85-bookworm AS builder
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates crates
+COPY migrations migrations
 
 RUN cargo build --release --bin sqz
 
