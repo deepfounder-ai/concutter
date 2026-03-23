@@ -306,6 +306,80 @@ impl Compressor {
             domain_detected,
         }
     }
+
+    /// Compress text with a specific compression level.
+    ///
+    /// - `Skip`   — return text unchanged (with token counts).
+    /// - `Light`  — run only the regex preprocessor (no Aho-Corasick).
+    /// - `Normal` — full pipeline (equivalent to [`compress`]).
+    pub fn compress_with_level(
+        &self,
+        text: &str,
+        domain_hint: Option<&str>,
+        level: CompressionLevel,
+    ) -> CompressionResult {
+        match level {
+            CompressionLevel::Skip => self.compress_skip(text),
+            CompressionLevel::Light => self.compress_light(text),
+            CompressionLevel::Normal => self.compress(text, domain_hint),
+        }
+    }
+
+    /// Skip compression — return the original text with token counts.
+    fn compress_skip(&self, text: &str) -> CompressionResult {
+        let tokens = self.token_counter.count(text);
+        CompressionResult {
+            text: text.to_string(),
+            original_tokens: tokens,
+            compressed_tokens: tokens,
+            compression_ratio: 1.0,
+            rules_applied: Vec::new(),
+            elapsed_us: 0,
+            domain_detected: None,
+        }
+    }
+
+    /// Light compression — only run the regex preprocessor, skip Aho-Corasick.
+    fn compress_light(&self, text: &str) -> CompressionResult {
+        let start_time = Instant::now();
+        let original_tokens = self.token_counter.count(text);
+
+        if text.is_empty() {
+            return CompressionResult {
+                text: String::new(),
+                original_tokens: 0,
+                compressed_tokens: 0,
+                compression_ratio: 1.0,
+                rules_applied: Vec::new(),
+                elapsed_us: 0,
+                domain_detected: None,
+            };
+        }
+
+        let (result, rules_applied) = if let Some(ref pp) = self.preprocessor {
+            let pp_result = pp.process(text);
+            (pp_result.text, pp_result.rules_applied)
+        } else {
+            (text.to_string(), vec![])
+        };
+
+        let compressed_tokens = self.token_counter.count(&result);
+        let compression_ratio = if original_tokens > 0 {
+            compressed_tokens as f64 / original_tokens as f64
+        } else {
+            1.0
+        };
+
+        CompressionResult {
+            text: result,
+            original_tokens,
+            compressed_tokens,
+            compression_ratio,
+            rules_applied,
+            elapsed_us: start_time.elapsed().as_micros() as u64,
+            domain_detected: None,
+        }
+    }
 }
 
 /// Check whether a match range overlaps with any protected region.
@@ -625,6 +699,91 @@ mod tests {
         let c = Compressor::build(static_layer.rules(), &domain_layer, vec![], config).unwrap();
         let result = c.compress("это «просто» тест", None);
         assert!(!result.text.contains("просто"));
+    }
+
+    // -----------------------------------------------------------------------
+    // compress_with_level tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_compress_with_level_skip() {
+        let c = build_test_compressor();
+        let text = "Could you please just do it";
+        let result = c.compress_with_level(text, None, CompressionLevel::Skip);
+        assert_eq!(result.text, text);
+        assert_eq!(result.compression_ratio, 1.0);
+        assert!(result.rules_applied.is_empty());
+    }
+
+    #[test]
+    fn test_compress_with_level_normal() {
+        let c = build_test_compressor();
+        let text = "Could you please just do it";
+        let normal = c.compress_with_level(text, None, CompressionLevel::Normal);
+        let direct = c.compress(text, None);
+        assert_eq!(normal.text, direct.text);
+        assert_eq!(normal.rules_applied, direct.rules_applied);
+    }
+
+    #[test]
+    fn test_compress_with_level_light_no_preprocessor() {
+        // Compressor without preprocessor — Light should be a no-op
+        let c = build_test_compressor();
+        let text = "## Heading with **bold** and please remove this";
+        let result = c.compress_with_level(text, None, CompressionLevel::Light);
+        // No preprocessor configured, so text is unchanged
+        assert_eq!(result.text, text);
+        assert!(result.rules_applied.is_empty());
+    }
+
+    fn build_test_compressor_with_preprocessor() -> Compressor {
+        let static_lines = vec![
+            "please".to_string(),
+            "could you please".to_string(),
+            "just".to_string(),
+        ];
+        let static_layer = crate::layer1_static::StaticLayer::load_from_strings(&static_lines);
+        let domain_layer = DomainLayer::load_from_configs(vec![]);
+        let config = CompressorConfig::default();
+        let pp = crate::preprocessor::Preprocessor::build(
+            &crate::preprocessor::PreprocessorConfig::default(),
+        )
+        .unwrap();
+        Compressor::build_with_preprocessor(
+            static_layer.rules(),
+            &domain_layer,
+            vec![],
+            config,
+            Some(pp),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_compress_with_level_light_with_preprocessor() {
+        let c = build_test_compressor_with_preprocessor();
+        let text = "## Please just do **something**";
+        let result = c.compress_with_level(text, None, CompressionLevel::Light);
+        // Preprocessor strips markdown: heading marker + bold markers
+        assert!(!result.text.contains("##"));
+        assert!(!result.text.contains("**"));
+        // But stopwords ("please", "just") are NOT removed by Light
+        assert!(result.text.to_lowercase().contains("please"));
+        assert!(result.text.to_lowercase().contains("just"));
+    }
+
+    #[test]
+    fn test_compress_with_level_normal_with_preprocessor() {
+        let c = build_test_compressor_with_preprocessor();
+        let text = "## Please just do **something**";
+        let result = c.compress_with_level(text, None, CompressionLevel::Normal);
+        // Both markdown AND stopwords removed
+        assert!(!result.text.contains("##"));
+        assert!(!result.text.contains("**"));
+        assert!(!result.text.to_lowercase().contains("please"));
+        assert!(!result.text.to_lowercase().contains("just"));
+        assert!(result.text.contains("do"));
+        assert!(result.text.contains("something"));
     }
 
     #[test]

@@ -6,6 +6,8 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
 use bytes::Bytes;
 
+use sqz_core::CompressionLevel;
+
 use crate::error::ProxyError;
 use crate::openai::stream::forward_stream;
 use crate::openai::types::ChatCompletionRequest;
@@ -35,18 +37,27 @@ pub async fn chat_completions(
     let model = req.model.clone();
     let is_streaming = req.stream.unwrap_or(false);
 
-    // Compress user and system messages (skip assistant and tool)
+    // Compress messages with role-aware compression levels:
+    // - Last user message: Skip (preserve user intent)
+    // - Older user messages: Normal (full compression)
+    // - System messages: Light (preprocessor only, no stopword removal)
+    // - Assistant/tool: Skip (not touched)
     let mut compression_results = Vec::new();
     if state.compression_enabled {
         let compressor = state.compressor.read().await;
-        for msg in &mut req.messages {
-            let role = msg.role.as_str();
-            if role == "user" || role == "system" {
-                for text in msg.content.text_mut() {
-                    let result = compressor.compress(text, None);
-                    *text = result.text.clone();
-                    compression_results.push(result);
-                }
+        let last_user_idx = req.messages.iter().rposition(|m| m.role == "user");
+
+        for (idx, msg) in req.messages.iter_mut().enumerate() {
+            let level = match msg.role.as_str() {
+                "user" if Some(idx) == last_user_idx => CompressionLevel::Skip,
+                "user" => CompressionLevel::Normal,
+                "system" => CompressionLevel::Light,
+                _ => continue,
+            };
+            for text in msg.content.text_mut() {
+                let result = compressor.compress_with_level(text, None, level);
+                *text = result.text.clone();
+                compression_results.push(result);
             }
         }
     }

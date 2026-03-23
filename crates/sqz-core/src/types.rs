@@ -189,6 +189,21 @@ impl Default for LayersEnabled {
 }
 
 // ---------------------------------------------------------------------------
+// CompressionLevel
+// ---------------------------------------------------------------------------
+
+/// Controls how aggressively a message is compressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompressionLevel {
+    /// Do not compress (last user message, tool results).
+    Skip,
+    /// Preprocessor only — no Aho-Corasick stopword removal (system prompts).
+    Light,
+    /// Full pipeline — preprocessor + Aho-Corasick (old messages).
+    Normal,
+}
+
+// ---------------------------------------------------------------------------
 // PreprocessorConfig (re-exported from preprocessor module)
 // ---------------------------------------------------------------------------
 
