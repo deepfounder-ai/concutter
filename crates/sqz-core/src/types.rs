@@ -149,7 +149,19 @@ impl Default for CompressorConfig {
         Self {
             confidence_threshold: 0.8,
             min_samples: 10,
-            languages: vec!["en".to_string()],
+            languages: vec![
+                "en".to_string(),
+                "ru".to_string(),
+                "es".to_string(),
+                "de".to_string(),
+                "fr".to_string(),
+                "pt".to_string(),
+                "zh".to_string(),
+                "ja".to_string(),
+                "ko".to_string(),
+                "ar".to_string(),
+                "hi".to_string(),
+            ],
             layers_enabled: LayersEnabled::default(),
         }
     }

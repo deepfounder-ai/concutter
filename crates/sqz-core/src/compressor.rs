@@ -322,21 +322,82 @@ fn is_in_any_protected_region(
 /// Check whether a match at `start..end` is on a word boundary.
 ///
 /// A match is on a word boundary if:
-/// - `start == 0` OR the byte before `start` is whitespace/punctuation
-/// - `end == len` OR the byte after `end - 1` is whitespace/punctuation
+/// - `start == 0` OR the character before `start` is whitespace/punctuation
+/// - `end == len` OR the character after `end - 1` is whitespace/punctuation
+///
+/// For non-ASCII text (Cyrillic, CJK, etc.) this decodes the full UTF-8
+/// character to check Unicode properties.
 fn is_word_boundary(bytes: &[u8], start: usize, end: usize) -> bool {
     let len = bytes.len();
 
-    let left_ok = start == 0 || is_boundary_byte(bytes[start - 1]);
-    let right_ok = end >= len || is_boundary_byte(bytes[end]);
+    let left_ok = start == 0 || is_boundary_at(bytes, start, false);
+    let right_ok = end >= len || is_boundary_at(bytes, end, true);
 
     left_ok && right_ok
 }
 
-/// Returns `true` if the byte is considered a word boundary character
-/// (whitespace or common punctuation).
+/// Check if there is a word boundary at the given byte position.
+///
+/// When `forward` is true, we look at the character starting at `pos`.
+/// When `forward` is false, we look at the character ending just before `pos`.
 #[inline]
-fn is_boundary_byte(b: u8) -> bool {
+fn is_boundary_at(bytes: &[u8], pos: usize, forward: bool) -> bool {
+    if forward {
+        // Look at byte at `pos`
+        if pos >= bytes.len() {
+            return true;
+        }
+        let b = bytes[pos];
+        if b.is_ascii() {
+            return is_ascii_boundary(b);
+        }
+        // Decode UTF-8 character at pos and check Unicode properties
+        if let Some(ch) = decode_utf8_char_at(bytes, pos) {
+            is_unicode_boundary(ch)
+        } else {
+            false
+        }
+    } else {
+        // Look at character ending just before `pos`
+        if pos == 0 {
+            return true;
+        }
+        let b = bytes[pos - 1];
+        if b.is_ascii() {
+            return is_ascii_boundary(b);
+        }
+        // Walk backwards to find the start of the UTF-8 character
+        if let Some(ch) = decode_utf8_char_before(bytes, pos) {
+            is_unicode_boundary(ch)
+        } else {
+            false
+        }
+    }
+}
+
+/// Decode the UTF-8 character starting at the given byte position.
+fn decode_utf8_char_at(bytes: &[u8], pos: usize) -> Option<char> {
+    let s = std::str::from_utf8(&bytes[pos..]).ok()?;
+    s.chars().next()
+}
+
+/// Decode the UTF-8 character ending just before the given byte position.
+fn decode_utf8_char_before(bytes: &[u8], pos: usize) -> Option<char> {
+    // Walk backwards up to 4 bytes to find a valid UTF-8 start byte
+    for offset in 1..=4.min(pos) {
+        let start = pos - offset;
+        if let Ok(s) = std::str::from_utf8(&bytes[start..pos]) {
+            if let Some(ch) = s.chars().last() {
+                return Some(ch);
+            }
+        }
+    }
+    None
+}
+
+/// Returns `true` if the ASCII byte is a word boundary character.
+#[inline]
+fn is_ascii_boundary(b: u8) -> bool {
     matches!(
         b,
         b' ' | b'\t'
@@ -361,6 +422,12 @@ fn is_boundary_byte(b: u8) -> bool {
             | b'-'
             | b'_'
     )
+}
+
+/// Returns `true` if the Unicode character is a word boundary (not alphanumeric).
+#[inline]
+fn is_unicode_boundary(ch: char) -> bool {
+    !ch.is_alphanumeric()
 }
 
 #[cfg(test)]
@@ -461,5 +528,119 @@ mod tests {
         assert!(is_word_boundary(text, 0, 5)); // "hello" at start
         assert!(is_word_boundary(text, 6, 11)); // "world" at end
         assert!(!is_word_boundary(text, 1, 4)); // "ello" not on boundary
+    }
+
+    #[test]
+    fn test_is_word_boundary_cyrillic() {
+        let text = "привет просто мир".as_bytes();
+        // "просто" starts after "привет " (12 + 1 = 13 bytes for "привет ")
+        let start = "привет ".len();
+        let end = start + "просто".len();
+        assert!(is_word_boundary(text, start, end)); // space-separated
+    }
+
+    #[test]
+    fn test_is_word_boundary_cyrillic_no_space() {
+        let text = "приветпростомир".as_bytes();
+        let start = "привет".len();
+        let end = start + "просто".len();
+        assert!(!is_word_boundary(text, start, end)); // no spaces, not a boundary
+    }
+
+    #[test]
+    fn test_russian_compression() {
+        let static_lines = vec![
+            "пожалуйста".to_string(),
+            "просто".to_string(),
+        ];
+        let static_layer = StaticLayer::load_from_strings(&static_lines);
+        let domain_layer = DomainLayer::load_from_configs(vec![]);
+        let config = CompressorConfig {
+            languages: vec!["ru".to_string()],
+            ..Default::default()
+        };
+        let c = Compressor::build(static_layer.rules(), &domain_layer, vec![], config).unwrap();
+        let result = c.compress("пожалуйста просто сделай это", None);
+        assert!(!result.text.contains("пожалуйста"));
+        assert!(!result.text.contains("просто"));
+        assert!(result.text.contains("сделай"));
+        assert!(!result.rules_applied.is_empty());
+    }
+
+    #[test]
+    fn test_spanish_compression() {
+        let static_lines = vec![
+            "por favor".to_string(),
+            "realmente".to_string(),
+        ];
+        let static_layer = StaticLayer::load_from_strings(&static_lines);
+        let domain_layer = DomainLayer::load_from_configs(vec![]);
+        let config = CompressorConfig::default();
+        let c = Compressor::build(static_layer.rules(), &domain_layer, vec![], config).unwrap();
+        let result = c.compress("por favor realmente hazlo", None);
+        assert!(!result.text.contains("por favor"));
+        assert!(!result.text.contains("realmente"));
+        assert!(result.text.contains("hazlo"));
+    }
+
+    #[test]
+    fn test_german_compression() {
+        let static_lines = vec![
+            "bitte".to_string(),
+            "wirklich".to_string(),
+        ];
+        let static_layer = StaticLayer::load_from_strings(&static_lines);
+        let domain_layer = DomainLayer::load_from_configs(vec![]);
+        let config = CompressorConfig::default();
+        let c = Compressor::build(static_layer.rules(), &domain_layer, vec![], config).unwrap();
+        let result = c.compress("bitte wirklich mach das", None);
+        assert!(!result.text.contains("bitte"));
+        assert!(!result.text.contains("wirklich"));
+        assert!(result.text.contains("mach das"));
+    }
+
+    #[test]
+    fn test_french_compression() {
+        let static_lines = vec![
+            "s'il vous plaît".to_string(),
+            "vraiment".to_string(),
+        ];
+        let static_layer = StaticLayer::load_from_strings(&static_lines);
+        let domain_layer = DomainLayer::load_from_configs(vec![]);
+        let config = CompressorConfig::default();
+        let c = Compressor::build(static_layer.rules(), &domain_layer, vec![], config).unwrap();
+        let result = c.compress("s'il vous plaît vraiment faites-le", None);
+        assert!(!result.text.contains("s'il vous plaît"));
+        assert!(!result.text.contains("vraiment"));
+        assert!(result.text.contains("faites-le"));
+    }
+
+    #[test]
+    fn test_unicode_punctuation_boundary() {
+        // Russian with «» quotes — Unicode punctuation should be boundaries
+        let static_lines = vec!["просто".to_string()];
+        let static_layer = StaticLayer::load_from_strings(&static_lines);
+        let domain_layer = DomainLayer::load_from_configs(vec![]);
+        let config = CompressorConfig::default();
+        let c = Compressor::build(static_layer.rules(), &domain_layer, vec![], config).unwrap();
+        let result = c.compress("это «просто» тест", None);
+        assert!(!result.text.contains("просто"));
+    }
+
+    #[test]
+    fn test_arrow_replacement_in_compression() {
+        let static_lines = vec![
+            "in order to -> to".to_string(),
+            "due to the fact that -> because".to_string(),
+        ];
+        let static_layer = StaticLayer::load_from_strings(&static_lines);
+        let domain_layer = DomainLayer::load_from_configs(vec![]);
+        let config = CompressorConfig::default();
+        let c = Compressor::build(static_layer.rules(), &domain_layer, vec![], config).unwrap();
+        let result = c.compress("in order to succeed due to the fact that it matters", None);
+        assert!(result.text.contains("to succeed"));
+        assert!(result.text.contains("because it matters"));
+        assert!(!result.text.contains("in order to"));
+        assert!(!result.text.contains("due to the fact that"));
     }
 }

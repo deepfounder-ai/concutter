@@ -45,7 +45,19 @@ fn default_language() -> String {
 }
 
 fn default_languages() -> Vec<String> {
-    vec!["en".to_string()]
+    vec![
+        "en".to_string(),
+        "ru".to_string(),
+        "es".to_string(),
+        "de".to_string(),
+        "fr".to_string(),
+        "pt".to_string(),
+        "zh".to_string(),
+        "ja".to_string(),
+        "ko".to_string(),
+        "ar".to_string(),
+        "hi".to_string(),
+    ]
 }
 
 fn default_sample_rate() -> f64 {
